@@ -1,0 +1,10 @@
+{
+  "payment_id": "PAY1001",
+  "user_id": "U123",
+  "order_id": "ORD567",
+  "amount": 1499.99,
+  "currency": "INR",
+  "method": "UPI",
+  "status": "Success",
+  "transaction_date": "2026-04-29T10:30:00Z"
+}

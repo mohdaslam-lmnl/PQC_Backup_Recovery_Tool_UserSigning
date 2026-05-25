@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EncVault — Recovery Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="tool-shell">
+        <header class="tool-header">
+            <h1>EncVault Recovery</h1>
+            <p>Provide your ML-KEM secret key, the backup signing public key, and enough signed shard files. Each shard is verified (ML-DSA) before decryption.</p>
+        </header>
+
+        <div class="steps-bar">
+            <span class="step-pill active" data-step="1">1 · Secret key</span>
+            <span class="step-pill" data-step="2">2 · Signing key</span>
+            <span class="step-pill" data-step="3">3 · Shards</span>
+            <span class="step-pill" data-step="4">4 · Recover</span>
+        </div>
+
+        <section id="panel-1" class="glass-card step-panel">
+            <h2>Decapsulation key</h2>
+            <p class="step-desc">Paste your ML-KEM 768 <strong>secret</strong> key (base64), e.g. <code>sk.b64</code>.</p>
+            <div class="form-group">
+                <label for="sk-input">Secret key (base64)</label>
+                <textarea id="sk-input" class="pk-input" placeholder="MIIE…"></textarea>
+            </div>
+            <div class="step-actions">
+                <button type="button" class="btn btn-primary" onclick="goStep(2)">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-2" class="glass-card step-panel" style="display:none">
+            <h2>Signing public key</h2>
+            <p class="step-desc">Paste or upload the Dilithium3 signing public key from backup (<code>sign_pk.b64</code>). Used to verify every shard before decryption.</p>
+            <div class="form-group">
+                <label for="sign-pk-input">Signing public key (base64)</label>
+                <textarea id="sign-pk-input" class="pk-input" placeholder="Signing public key from backup"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Or upload sign_pk.b64</label>
+                <input type="file" id="sign-pk-file" accept=".b64,.json,.txt" />
+            </div>
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(1)">Back</button>
+                <button type="button" class="btn btn-primary" id="btn-next-sign-pk" onclick="goStep(3)">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-3" class="glass-card step-panel" style="display:none">
+            <h2>Signed shard files</h2>
+            <p class="step-desc" id="shard-upload-desc">Upload one signed shard JSON, click <strong>Verify shard</strong>, then upload the remaining shards until you have at least the threshold.</p>
+
+            <div class="form-group">
+                <label>Add shard file</label>
+                <div class="dropzone" id="shard-drop" onclick="document.getElementById('shard-file').click()">
+                    <input type="file" id="shard-file" accept=".json,application/json" style="display:none">
+                    <div class="dropzone-content">
+                        <p>Drop a signed shard JSON here or <span class="dropzone-link">browse</span></p>
+                        <p class="dropzone-hint" id="shard-pending-hint">No file selected</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-actions" style="margin-bottom:1rem">
+                <button type="button" class="btn btn-primary" id="verify-shard-btn" disabled onclick="verifyPendingShard()">Verify shard</button>
+            </div>
+
+            <p id="backup-meta" class="shard-meta" style="display:none"></p>
+            <div id="verify-status" class="status-msg" style="display:none"></div>
+            <div class="shard-list" id="shard-staging"></div>
+            <p class="dropzone-hint" id="shard-count-hint">0 verified shard(s)</p>
+
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(2)">Back</button>
+                <button type="button" class="btn btn-primary" id="btn-next-shards" disabled onclick="goStep(4)">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-4" class="glass-card step-panel" style="display:none">
+            <h2>Recover plaintext</h2>
+            <p class="step-desc">Enter the same backup passphrase you used when encrypting. Decryption runs locally after all required shards are verified.</p>
+            <div class="form-group">
+                <label for="passphrase-input">Backup passphrase</label>
+                <input type="password" id="passphrase-input" class="pk-input" style="min-height:2.5rem" placeholder="Passphrase from backup" autocomplete="off">
+                <p id="passphrase-status" class="dropzone-hint">Required: without the backup passphrase, the encrypted file key cannot be derived for recovery.</p>
+            </div>
+            <div id="decrypt-status" class="status-msg" style="display:none"></div>
+            <pre id="result-preview" class="modal-content" style="display:none; margin-top:1rem; max-height:280px;"></pre>
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(3)">Back</button>
+                <button type="button" class="btn btn-primary" id="decrypt-btn" onclick="runDecrypt()">Decrypt</button>
+                <button type="button" class="btn btn-success" id="dl-plain-btn" style="display:none" onclick="downloadPlain()">Download JSON</button>
+                <button type="button" class="btn btn-ghost" onclick="resetRecovery()">Start over</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

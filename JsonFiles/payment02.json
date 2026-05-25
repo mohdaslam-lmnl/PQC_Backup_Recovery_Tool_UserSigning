@@ -1,0 +1,10 @@
+{
+  "payment_id": "PAY1002",
+  "user_id": "U124",
+  "order_id": "ORD568",
+  "amount": 799.50,
+  "currency": "INR",
+  "method": "Credit Card",
+  "status": "Pending",
+  "transaction_date": "2026-04-29T11:15:00Z"
+}

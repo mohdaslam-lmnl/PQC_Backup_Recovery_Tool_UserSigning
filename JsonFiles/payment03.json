@@ -1,0 +1,10 @@
+{
+  "payment_id": "PAY1003",
+  "user_id": "U125",
+  "order_id": "ORD569",
+  "amount": 2500.00,
+  "currency": "INR",
+  "method": "Net Banking",
+  "status": "Failed",
+  "transaction_date": "2026-04-29T12:00:00Z"
+}

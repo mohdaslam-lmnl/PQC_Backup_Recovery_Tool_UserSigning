@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EncVault — Backup Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="tool-shell">
+        <header class="tool-header">
+            <h1>EncVault Backup</h1>
+            <p>ML-KEM 768 encapsulation, AES-256-GCM encryption, Shamir sharding, and ML-DSA (Dilithium3) signatures on every shard. Each shard file is self-contained — no separate rest payload.</p>
+        </header>
+
+        <div class="steps-bar">
+            <span class="step-pill active" data-step="1">1 · Key</span>
+            <span class="step-pill" data-step="2">2 · JSON</span>
+            <span class="step-pill" data-step="3">3 · Shards</span>
+            <span class="step-pill" data-step="4">4 · Encrypt</span>
+        </div>
+
+        <section id="panel-1" class="glass-card step-panel">
+            <h2>Encapsulation key</h2>
+            <p class="step-desc">Paste the recipient’s ML-KEM 768 <strong>public</strong> key (base64), often distributed as <code>pk.b64</code>.</p>
+            <div class="form-group">
+                <label for="pk-input">Public key (base64)</label>
+                <textarea id="pk-input" class="pk-input" placeholder="MIIB…"></textarea>
+            </div>
+            <div class="step-actions">
+                <button type="button" class="btn btn-primary" onclick="goStep(2)">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-2" class="glass-card step-panel" style="display:none">
+            <h2>JSON to encrypt</h2>
+            <p class="step-desc">Upload the JSON file to protect. After encryption you download only signed shard files.</p>
+            <div class="form-group">
+                <label>File</label>
+                <div class="dropzone" id="json-drop" onclick="document.getElementById('json-file').click()">
+                    <input type="file" id="json-file" accept=".json,application/json" style="display:none">
+                    <div class="dropzone-content">
+                        <p>Drop a <code>.json</code> file here or <span class="dropzone-link">browse</span></p>
+                        <p class="dropzone-hint" id="json-name-hint">No file selected</p>
+                    </div>
+                </div>
+            </div>
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(1)">Back</button>
+                <button type="button" class="btn btn-primary" id="btn-next-2" disabled onclick="goStep(3)">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-3" class="glass-card step-panel" style="display:none">
+            <h2>Shamir parameters &amp; passphrase</h2>
+            <p class="step-desc">Choose total shards and threshold. Enter the backup passphrase you were given — it is combined with an internal key to encrypt your file (the passphrase is never stored in shards).</p>
+            <div class="form-group">
+                <label for="passphrase-input">Backup passphrase</label>
+                <input type="password" id="passphrase-input" class="pk-input" style="min-height:2.5rem" placeholder="Enter your passphrase" autocomplete="off">
+                <p id="passphrase-status" class="dropzone-hint">Required: this passphrase is part of the file-encryption key derivation shown in the backup flow.</p>
+            </div>
+            <div class="row-2">
+                <div class="form-group">
+                    <label for="total-shards">Total shards</label>
+                    <input type="number" id="total-shards" min="1" max="255" value="3">
+                </div>
+                <div class="form-group">
+                    <label for="threshold">Threshold</label>
+                    <input type="number" id="threshold" min="1" max="255" value="2">
+                </div>
+            </div>
+            <p id="shard-hint" class="shard-meta" style="display:none"></p>
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(2)">Back</button>
+                <button type="button" class="btn btn-primary" id="btn-next-3" onclick="validateShardingAndGo()">Next</button>
+            </div>
+        </section>
+
+        <section id="panel-4" class="glass-card step-panel" style="display:none">
+            <h2>Encrypt &amp; download signed shards</h2>
+            <p class="step-desc">A fresh Dilithium3 signing keypair is generated when you open this step. Save the <strong>signing public key</strong> — recovery requires it to verify every shard.</p>
+
+            <div id="sign-key-area" class="form-group" style="display:none">
+                <label>Signing public key (base64) — for recovery verification</label>
+                <textarea id="sign-pk-display" class="pk-input" readonly rows="4"></textarea>
+                <div class="row-2" style="margin-top:0.75rem">
+                    <button type="button" class="btn btn-ghost btn-sm" id="copy-sign-pk-btn">Copy public key</button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="dl-sign-pk-btn">Download sign_pk.b64</button>
+                </div>
+            </div>
+            <p id="sign-key-status" class="shard-meta">Preparing signing keys…</p>
+
+            <div id="encrypt-status" class="status-msg" style="display:none"></div>
+            <div id="dl-area" style="display:none">
+                <p class="step-desc" style="margin-top:1rem">Store each shard and the signing public key in separate safe locations. Every shard embeds the encrypted payload and carries an ML-DSA signature.</p>
+                <div class="dl-list" id="dl-list"></div>
+            </div>
+            <div class="step-actions">
+                <button type="button" class="btn btn-ghost" onclick="goStep(3)">Back</button>
+                <button type="button" class="btn btn-primary" id="encrypt-run-btn" disabled onclick="runEncrypt()">Encrypt &amp; prepare downloads</button>
+                <button type="button" class="btn btn-ghost" onclick="resetWizard()">Start over</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
